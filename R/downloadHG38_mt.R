@@ -3,29 +3,35 @@
 #' Recomendamos continuar su pipeline con la funcion indexGenomeBWA() para generar el indexado y anotacion del genoma
 #' que servira para futuros alineamientos del genoma con el software BWA.
 #' @return The path where the .fasta reference file is located
-downloadHG38_MT <- function(mitor_sof) {
+downloadHG38_MT <- function(soft_directory = sprintf("%s/OMICsSoft", Sys.getenv('R_LIBS_USER'))) {
   tryCatch(
     expr = {
-      path_HG38_MT <- sprintf('%s/HG38-MT/Homo_sapiens.GRCh38.dna.chromosome.MT.fasta', mitor_sof)
-      if (!file.exists(path_HG38_MT)) {
-        stop("Comenzara automaticamente la descarga del HG30 mitocondrial.")
+
+      if (file.exists(sprintf("%s/OMICsSoft/path_to_softwares.txt", Sys.getenv('R_LIBS_USER')))) {
+        softwares <- readLines(sprintf("%s/OMICsSoft/path_to_soft.txt", Sys.getenv('R_LIBS_USER')))
+        linea_software <- grep("HG38_MT", softwares, ignore.case = TRUE, value = TRUE)
+        path_HG38_MT <<- strsplit(linea_software, " ")[[1]][[2]]
+      }
+
+      if (length(path_HG38_MT) == 0) {
+        stop()
       }
 
       return(path_HG38_MT)
     },
     error = function(e) {
-      # En caso de haberlo descargado y hay algun problema con el ejecutable, 
+      # En caso de haberlo descargado y hay algun problema con el ejecutable,
       # eliminamos y descargamos de nuevo
       if (file.exists(sprintf('%s/PICARD', mitor_sof))) {
         system2("rm", sprintf('-r %s/PICARD', mitor_sof))
-        
+
         print("There is a problem with the PICARD .exe file. It will be removed and download again")
       }
-      
+
       message("HG38-MT download and installation is about to begin...
               Please be patient, it may take a while.")
       print(e)
-      
+
       tryCatch(
         expr = {
           # Proceso de Descarga de PICARD
@@ -34,17 +40,17 @@ downloadHG38_MT <- function(mitor_sof) {
           dir <- sprintf("%s/RefHG38", mitor_sof)
           system2("wget", args = c(URL, "-P", dir), wait = TRUE, stdout = NULL, stderr = NULL)
           system2("gzip" , sprintf("-d %s/%s", dir, basename(URL)))
-          
+
           reference <- substr(basename(URL), 1, nchar(basename(URL)) - 3)
           referenceN <- stringr::str_replace(reference, "fa", "fasta")
           referenceN <- sprintf("%s/%s", dir, referenceN)
           reference <- sprintf("%s/%s", dir, reference)
-          
+
           system2("mv", sprintf("%s %s", reference, referenceN))
-          
+
           return(referenceN)
         },
-        
+
         error = function(e) {
           message("An error occured while performing the HG38-MT download and installation.
       Please remember that some packages are required and you must download them by yourself.
@@ -54,7 +60,7 @@ On the Linux command-line print:
 ------------------------------------------------------")
           print(e)
         },
-        
+
         finally = {
           message("-.Message from Ensembl")
         }
